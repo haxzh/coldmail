@@ -63,6 +63,8 @@ def default_settings() -> Dict[str, Any]:
         "delay_max": 10,
         "max_retries": 1,
         "max_emails_per_run": 0,
+        "use_custom_template_text": False,
+        "template_body_text": "",
     }
 
 
@@ -178,7 +180,12 @@ def get_status_counts(excel_path: str) -> Dict[str, int]:
     return counts
 
 
-def render_preview(excel_path: str, template_path: str, subject_template: str) -> None:
+def render_preview(
+    excel_path: str,
+    template_path: str,
+    subject_template: str,
+    template_text: Optional[str] = None,
+) -> None:
     df = read_contacts(excel_path)
     pending = df[df["Status"].apply(should_process_status)]
     if pending.empty:
@@ -191,7 +198,7 @@ def render_preview(excel_path: str, template_path: str, subject_template: str) -
     title = safe_text(first.get("Title")) or "the role"
     email = safe_text(first.get("Email"))
 
-    body_template = load_template(template_path)
+    body_template = template_text if safe_text(template_text) else load_template(template_path)
     subject = render_template(subject_template, name=name, company=company, title=title)
     body = render_template(body_template, name=name, company=company, title=title)
 
@@ -221,6 +228,8 @@ def main() -> None:
     )
 
     settings = load_settings()
+    if "last_excel_download_path" not in st.session_state:
+        st.session_state.last_excel_download_path = ""
 
     with st.sidebar:
         st.header("Account & Config")
@@ -287,6 +296,19 @@ def main() -> None:
             "Subject Template",
             value=settings.get("subject_template", DEFAULT_SUBJECT_TEMPLATE),
         )
+        use_custom_template_text = st.checkbox(
+            "Use Email Text from Dashboard",
+            value=bool(settings.get("use_custom_template_text", False)),
+            help="If enabled, this text is used instead of template file.",
+        )
+        template_body_text = st.text_area(
+            "Email Text",
+            value=str(settings.get("template_body_text", "")),
+            height=220,
+            placeholder=(
+                "Write your email body here. You can use {name}, {company}, {title}."
+            ),
+        )
         delay_min = st.number_input(
             "Delay Min (seconds)",
             min_value=0,
@@ -329,6 +351,8 @@ def main() -> None:
                 "delay_max": int(delay_max),
                 "max_retries": int(max_retries),
                 "max_emails_per_run": int(max_emails_per_run),
+                "use_custom_template_text": bool(use_custom_template_text),
+                "template_body_text": template_body_text,
             }
             save_settings(saved_settings)
             st.success("Settings saved. Next time fields will auto-fill.")
@@ -352,7 +376,12 @@ def main() -> None:
         st.subheader("Email Preview")
         if st.button("Preview First Pending Email"):
             try:
-                render_preview(active_excel_path, active_template_path, subject_template)
+                render_preview(
+                    active_excel_path,
+                    active_template_path,
+                    subject_template,
+                    template_body_text if use_custom_template_text else None,
+                )
             except Exception as err:
                 st.error(f"Preview failed: {err}")
 
@@ -406,6 +435,7 @@ def main() -> None:
                 sender_email=sender_email.strip(),
                 app_password=app_password.strip(),
                 template_path=active_template_path.strip() or None,
+                template_text=template_body_text if use_custom_template_text else None,
                 subject_template=subject_template.strip() or DEFAULT_SUBJECT_TEMPLATE,
                 delay_min=int(delay_min),
                 delay_max=int(delay_max),
@@ -421,15 +451,22 @@ def main() -> None:
 
                 updated_excel = Path(active_excel_path)
                 if updated_excel.exists():
-                    st.download_button(
-                        "Download Updated Excel",
-                        data=updated_excel.read_bytes(),
-                        file_name=updated_excel.name,
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True,
-                    )
+                    st.session_state.last_excel_download_path = str(updated_excel)
+                    st.info("Deployment tip: click Download Updated Excel to get the latest Status changes.")
             except Exception as err:
                 st.error(f"Automation stopped: {err}")
+
+        saved_excel_path = st.session_state.get("last_excel_download_path", "")
+        if saved_excel_path:
+            updated_excel = Path(saved_excel_path)
+            if updated_excel.exists():
+                st.download_button(
+                    "Download Updated Excel",
+                    data=updated_excel.read_bytes(),
+                    file_name=updated_excel.name,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
 
 
 if __name__ == "__main__":

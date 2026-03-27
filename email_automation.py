@@ -46,6 +46,7 @@ class EmailJobConfig:
     sender_email: str
     app_password: str
     template_path: Optional[str] = None
+    template_text: Optional[str] = None
     subject_template: str = DEFAULT_SUBJECT_TEMPLATE
     delay_min: int = 5
     delay_max: int = 10
@@ -210,7 +211,7 @@ def send_emails(config: EmailJobConfig, logger: Callable[[str], None]) -> None:
         )
 
     df = read_contacts(config.excel_path)
-    body_template = load_template(config.template_path)
+    body_template = config.template_text if safe_text(config.template_text) else load_template(config.template_path)
 
     smtp_server: Optional[smtplib.SMTP_SSL] = None
     if not config.preview_only:
