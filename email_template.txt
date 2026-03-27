@@ -1,0 +1,18 @@
+
+Hi {name},
+
+My name is Harsh Kumar, and I am a Software Developer with hands-on experience in building real-world applications.
+
+I have worked on projects such as an AI-powered SaaS platform, a real-time chat application, and a face recognition-based attendance system, which have strengthened my development and problem-solving skills.
+
+I am reaching out to explore Software Developer opportunities at {company} where I can contribute to building scalable and efficient solutions.
+
+I have attached my resume for your review and would appreciate the opportunity to connect.
+
+Thank you for your time.
+
+Best regards,
+Harsh Kumar
++91 8077827705
+harshshakya908435@gmail.com
+

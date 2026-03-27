@@ -1,0 +1,29 @@
+# Python cache and virtual env
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Streamlit runtime and local settings
+.runtime_uploads/
+.streamlit/secrets.toml
+mail_settings.json
+
+# Local data / sensitive files
+*.xlsx
+*.xls
+~$*.xlsx
+resume.pdf
+
+# OS/editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs and backups
+*.log
+contacts_backup_*.xlsx
