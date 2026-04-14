@@ -23,7 +23,6 @@ from email_automation import (
 SETTINGS_FILE = Path("mail_settings.json")
 UPLOAD_DIR = Path(".runtime_uploads")
 st: Optional[object] = None
-THEME_FILE = Path("theme_settings.json")
 
 
 def _has_streamlit_context() -> bool:
@@ -34,24 +33,6 @@ def _has_streamlit_context() -> bool:
         return get_script_run_ctx() is not None
     except Exception:
         return False
-
-
-def load_theme_settings() -> Dict[str, Any]:
-    """Load theme settings (dark/light mode)."""
-    default_theme = {"dark_mode": False}
-    if THEME_FILE.exists():
-        try:
-            loaded = json.loads(THEME_FILE.read_text(encoding="utf-8"))
-            if isinstance(loaded, dict):
-                return loaded
-        except Exception:
-            pass
-    return default_theme
-
-
-def save_theme_settings(theme: Dict[str, Any]) -> None:
-    """Save theme settings to file."""
-    THEME_FILE.write_text(json.dumps(theme, indent=2), encoding="utf-8")
 
 
 def _auto_launch_streamlit_if_needed() -> None:
@@ -148,6 +129,21 @@ def inject_styles(dark_mode: bool = False) -> None:
             .stApp {
                 background: linear-gradient(135deg, #0f172a 0%, #1a1f35 50%, #16213e 100%);
                 color: var(--text-primary);
+            }
+
+            /* Remove default white Streamlit chrome in dark mode */
+            [data-testid="stHeader"] {
+                background: rgba(15, 23, 42, 0.96) !important;
+                border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+            }
+
+            [data-testid="stToolbar"],
+            [data-testid="stDecoration"] {
+                background: transparent !important;
+            }
+
+            [data-testid="stSidebarNav"] {
+                background: transparent !important;
             }
 
             .stApp, .stApp p, .stApp li, .stApp span, .stApp div, .stApp label {
@@ -247,6 +243,22 @@ def inject_styles(dark_mode: bool = False) -> None:
                 border-radius: 14px;
             }
 
+            [data-testid="stExpander"] details,
+            [data-testid="stExpander"] summary {
+                background: rgba(30, 41, 59, 0.92) !important;
+                border-radius: 12px;
+            }
+
+            [data-testid="stExpander"] summary:hover {
+                background: rgba(51, 65, 85, 0.98) !important;
+            }
+
+            [data-testid="stExpanderToggleIcon"] svg,
+            [data-testid="stExpander"] summary svg {
+                fill: #cbd5e1 !important;
+                color: #cbd5e1 !important;
+            }
+
             [data-testid="stExpander"] summary,
             [data-testid="stExpander"] button {
                 color: var(--text-primary) !important;
@@ -257,6 +269,15 @@ def inject_styles(dark_mode: bool = False) -> None:
                 background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
                 color: #ffffff !important;
                 border: none;
+            }
+
+            [data-testid="stCheckbox"] div[role="checkbox"] {
+                background: rgba(30, 41, 59, 0.95) !important;
+                border-color: rgba(148, 163, 184, 0.35) !important;
+            }
+
+            [data-testid="stFileUploaderDropzone"] section {
+                background: rgba(30, 41, 59, 0.95) !important;
             }
 
             /* Hero Section */
@@ -793,21 +814,10 @@ def main() -> None:
     st = st_module
 
     st.set_page_config(page_title="Cold Email Dashboard", page_icon="📨", layout="wide")
-    
-    # Initialize theme
-    if "dark_mode" not in st.session_state:
-        theme = load_theme_settings()
-        st.session_state.dark_mode = theme.get("dark_mode", False)
-    
-    inject_styles(st.session_state.dark_mode)
+    inject_styles(True)
 
-    # Top right theme toggle
-    col1, col2, col3 = st.columns([1, 0.15, 0.15])
-    with col3:
-        if st.button("🌙" if not st.session_state.dark_mode else "☀️", key="theme_toggle", help="Toggle Theme"):
-            st.session_state.dark_mode = not st.session_state.dark_mode
-            save_theme_settings({"dark_mode": st.session_state.dark_mode})
-            st.rerun()
+    # Keep top spacing where toggle existed for cleaner alignment.
+    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
     st.markdown(
         """
@@ -844,6 +854,7 @@ def main() -> None:
         
         with st.expander("📁 Quick File Select", expanded=True):
             st.caption("📤 Upload Files")
+            st.caption("Excel minimum columns: Name, Company Name, Email. Optional: Title. Status and Date are auto-created.")
             excel_upload = st.file_uploader(
                 "Select Excel File",
                 type=["xlsx", "xls"],
